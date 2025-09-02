@@ -145,9 +145,9 @@ def _wrap_triggers(bot):
                         user_negative_threshold = float(u.trigger_threshold_negative or -5.0)
                         
                         if ((float(ch) >= user_positive_threshold) or (float(ch) <= user_negative_threshold)) and not recent(u.id,ticker=t) and daily_count(u.id) < 8 and u.triggers_enabled:
-                            text = f"⚡ Событие по {t}: значимое дневное изменение (цена {q.get('last')}, Δдень {ch}%).\n" \ 
-                                   f"Некоторые трейдеры рассматривают такие движения как важные для сценария.\n" \ 
-                                   f"ℹ️ Аналитика и обучение. Не является индивидуальной инвестрекомендацией."
+                            text = (f"⚡ Событие по {t}: значимое дневное изменение (цена {q.get('last')}, Δдень {ch}%).\n"
+                                   f"Некоторые трейдеры рассматривают такие движения как важные для сценария.\n"
+                                   f"ℹ️ Аналитика и обучение. Не является индивидуальной инвестрекомендацией.")
                             await bot.send_message(int(u.tg_id), text)
                             ev = EventLog(user_id=u.id, ticker=t, event_type="trigger", payload={"change_pct":ch}, sent_at=datetime.utcnow())
                             s.add(ev); s.commit()
