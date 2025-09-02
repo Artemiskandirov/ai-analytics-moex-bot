@@ -36,7 +36,7 @@ async def cmd_trial(m: types.Message):
         user = get_or_create_user(m.from_user.id)
         u = s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
         
-        if u.free_trial_used:
+    if u.free_trial_used:
             await m.answer(TRIAL_USED_TEXT.format(price=PREMIUM_PRICE))
             return
         
@@ -80,46 +80,45 @@ async def cmd_trial(m: types.Message):
         board = selected_position.board
         
         # Получаем котировки в зависимости от типа инструмента
-        try:
-            quotes = {}
-            if board == BOARD_SHARES:
-                quotes = quotes_shares([ticker])
-            elif board == BOARD_ETF:
-                quotes = quotes_etf([ticker])
-            elif board == BOARD_BONDS:
-                quotes = quotes_bonds([ticker])
-            
-            quote = quotes.get(ticker, {})
-            if not quote:
-                await m.answer(f"❌ Временно не удается получить данные по {ticker}. Попробуйте позже.")
-                return
-            
-            # Вычисляем технические уровни
-            levels = educational_levels(
-                quote.get("last"), 
-                1.0, 
-                support=(quote.get("low") or 0), 
-                resistance=(quote.get("high") or 0), 
-                k=1.5
-            )
-            
-            # Генерируем анализ
-            note = render_trial_note(ticker, quote, levels)
+        quotes = {}
+        if board == BOARD_SHARES:
+            quotes = quotes_shares([ticker])
+        elif board == BOARD_ETF:
+            quotes = quotes_etf([ticker])
+        elif board == BOARD_BONDS:
+            quotes = quotes_bonds([ticker])
+        
+        quote = quotes.get(ticker, {})
+        if not quote:
+            await m.answer(f"❌ Временно не удается получить данные по {ticker}. Попробуйте позже.")
+            return
+        
+        # Вычисляем технические уровни
+        levels = educational_levels(
+            quote.get("last"), 
+            1.0, 
+            support=(quote.get("low") or 0), 
+            resistance=(quote.get("high") or 0), 
+            k=1.5
+        )
+        
+        # Генерируем анализ
+        note = render_trial_note(ticker, quote, levels)
     await m.answer(note)
-            
-            # Отмечаем что trial использован
-            u.free_trial_used = True
-            u.free_trial_used_at = datetime.utcnow()
-            u.trial_asset = ticker
-            s.commit()
-            
-            # Показываем информацию о премиуме
+        
+        # Отмечаем что trial использован
+        u.free_trial_used = True
+        u.free_trial_used_at = datetime.utcnow()
+        u.trial_asset = ticker
+        s.commit()
+        
+        # Показываем информацию о премиуме
     await m.answer(PAYWALL.format(price=PREMIUM_PRICE))
             
-        except Exception as e:
-            logger.error(f"Error in trial analysis for {ticker}: {e}")
-            await m.answer(f"❌ Произошла ошибка при анализе {ticker}. Попробуйте позже.")
-            
+    except Exception as e:
+        logger.error(f"Error in trial analysis: {e}")
+        await m.answer(f"❌ Произошла ошибка при анализе. Попробуйте позже.")
+        
     finally:
         s.close()
 
