@@ -36,7 +36,7 @@ async def cmd_trial(m: types.Message):
         user = get_or_create_user(m.from_user.id)
         u = s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
         
-    if u.free_trial_used:
+        if u.free_trial_used:
             await m.answer(TRIAL_USED_TEXT.format(price=PREMIUM_PRICE))
             return
         
