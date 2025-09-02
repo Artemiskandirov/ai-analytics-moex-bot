@@ -2,6 +2,12 @@
 
 > Telegram-бот для аналитики российского фондового рынка с использованием MOEX ISS API и OpenAI
 
+**🎯 СТАТУС: ГОТОВ К ИСПОЛЬЗОВАНИЮ** 
+- ✅ Полная функциональность
+- ✅ Long polling режим (работает без домена/SSL)
+- ✅ Автоматические дайджесты и триггеры  
+- ✅ PostgreSQL база данных
+
 ## 🎯 Основные возможности
 
 ### 🆓 Бесплатные функции
@@ -17,10 +23,32 @@
 
 ## 🚀 Быстрый старт
 
-### 1. Подготовка
+### Готовое развертывание (рекомендуется)
+
+Бот полностью готов к работе с long polling режимом:
+
 ```bash
-git clone <repository>
-cd ai-analytics-bot-with-triggers
+# На сервере
+git clone https://github.com/Artemiskandirov/ai-analytics-moex-bot.git
+cd ai-analytics-moex-bot
+
+# Настройте .env файл
+cp .env.example .env
+nano .env  # Добавьте BOT_TOKEN и OPENAI_API_KEY
+
+# Запустите
+docker-compose up -d
+
+# Проверьте логи
+docker-compose logs --tail=20 web
+
+# Протестируйте бота: @Market_Lensbot
+```
+
+### 1. Подготовка (для разработки)
+```bash
+git clone https://github.com/Artemiskandirov/ai-analytics-moex-bot.git
+cd ai-analytics-moex-bot
 cp env.example .env
 ```
 
