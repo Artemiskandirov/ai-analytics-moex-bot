@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -33,8 +34,8 @@ async def startup():
         init_db()
         logger.info("Database initialized successfully")
         
-        # Настройка webhook
-        if BASE_URL:
+        # Настройка webhook или запуск long polling
+        if BASE_URL and BASE_URL.startswith("https://"):
             webhook_url = f"{BASE_URL}{WEBHOOK_PATH}"
             logger.info(f"Setting webhook to: {webhook_url}")
             try:
@@ -44,7 +45,12 @@ async def startup():
                 logger.error(f"Failed to set webhook: {e}")
                 raise
         else:
-            logger.warning("BASE_URL not set, webhook will not be configured")
+            if BASE_URL:
+                logger.warning("BASE_URL is not HTTPS; starting long polling instead of webhook")
+            else:
+                logger.warning("BASE_URL not set; starting long polling instead of webhook")
+            # Запускаем long polling в фоне, чтобы не блокировать FastAPI
+            asyncio.create_task(dp.start_polling(bot))
         
         # Запуск планировщика задач
         logger.info("Starting scheduler...")
