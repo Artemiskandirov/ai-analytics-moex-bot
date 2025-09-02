@@ -9,7 +9,7 @@ from aiogram.types import Update
 from .storage import init_db
 from .handlers import router as tg_router
 from .worker import start_scheduler
-from .config import TELEGRAM_TOKEN, BASE_URL, WEBHOOK_PATH
+from .config import BOT_TOKEN, BASE_URL, WEBHOOK_PATH
 from .logging_config import setup_logging, log_user_action, log_api_call
 import uvicorn
 
@@ -17,7 +17,7 @@ import uvicorn
 setup_logging()
 logger = logging.getLogger(__name__)
 
-bot = Bot(TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp  = Dispatcher()
 dp.include_router(tg_router)
 app = FastAPI()

@@ -1,6 +1,6 @@
 import os
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DATABASE_URL   = os.getenv("DATABASE_URL", "sqlite:///app.db")
 TIMEZONE       = os.getenv("TIMEZONE", "Europe/Moscow")

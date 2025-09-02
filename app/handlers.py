@@ -9,24 +9,40 @@ from .levels import educational_levels
 from .llm import render_trial_note, render_digest
 import re
 import logging
+import os
 
 logger = logging.getLogger(__name__)
-
 router = Router()
 
+# Constants
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "demo_code")
+
+
 def get_or_create_user(tg_id):
-    s=Session()
-    u=s.query(User).filter_by(tg_id=str(tg_id)).first()
-    if not u:
-        u=User(tg_id=str(tg_id)); s.add(u); s.commit()
-        p=Portfolio(user_id=u.id); s.add(p); s.commit()
-    s.close()
-    return u
+    """Получает или создаёт пользователя"""
+    s = Session()
+    try:
+        u = s.query(User).filter_by(tg_id=str(tg_id)).first()
+        if not u:
+            u = User(tg_id=str(tg_id))
+            s.add(u)
+            s.commit()
+            
+            # Создаём портфель для нового пользователя
+            p = Portfolio(user_id=u.id)
+            s.add(p)
+            s.commit()
+        return u
+    finally:
+        s.close()
+
 
 @router.message(Command("start"))
 async def cmd_start(m: types.Message):
+    """Стартовая команда"""
     get_or_create_user(m.from_user.id)
     await m.answer(HELLO)
+
 
 @router.message(Command("trial"))
 async def cmd_trial(m: types.Message):
@@ -36,7 +52,7 @@ async def cmd_trial(m: types.Message):
         user = get_or_create_user(m.from_user.id)
         u = s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
         
-    if u.free_trial_used:
+        if u.free_trial_used:
             await m.answer(TRIAL_USED_TEXT.format(price=PREMIUM_PRICE))
             return
         
@@ -104,7 +120,7 @@ async def cmd_trial(m: types.Message):
         
         # Генерируем анализ
         note = render_trial_note(ticker, quote, levels)
-    await m.answer(note)
+        await m.answer(note)
         
         # Отмечаем что trial использован
         u.free_trial_used = True
@@ -113,19 +129,21 @@ async def cmd_trial(m: types.Message):
         s.commit()
         
         # Показываем информацию о премиуме
-    await m.answer(PAYWALL.format(price=PREMIUM_PRICE))
+        await m.answer(PAYWALL.format(price=PREMIUM_PRICE))
             
     except Exception as e:
         logger.error(f"Error in trial analysis: {e}")
-        await m.answer(f"❌ Произошла ошибка при анализе. Попробуйте позже.")
+        await m.answer("❌ Произошла ошибка при анализе. Попробуйте позже.")
         
     finally:
         s.close()
+
 
 @router.message(Command("help"))
 async def cmd_help(m: types.Message):
     """Справка по командам"""
     await m.answer(HELP_TEXT)
+
 
 @router.message(Command("analyze"))
 async def cmd_analyze(m: types.Message):
@@ -169,10 +187,12 @@ async def cmd_analyze(m: types.Message):
     finally:
         s.close()
 
+
 @router.message(Command("features"))
 async def cmd_features(m: types.Message):
     """Показывает возможности премиум подписки"""
     await m.answer(PREMIUM_FEATURES_TEXT)
+
 
 @router.message(Command("settings"))
 async def cmd_settings(m: types.Message):
@@ -205,6 +225,7 @@ async def cmd_settings(m: types.Message):
         
     finally:
         s.close()
+
 
 @router.message(Command("trigger_set"))
 async def cmd_trigger_set(m: types.Message):
@@ -264,6 +285,7 @@ async def cmd_trigger_set(m: types.Message):
     finally:
         s.close()
 
+
 @router.message(Command("trigger_on"))
 async def cmd_trigger_on(m: types.Message):
     """Включает триггеры уведомлений"""
@@ -285,7 +307,8 @@ async def cmd_trigger_on(m: types.Message):
                       f"Изменить пороги: /trigger_set +10 -7")
         
     finally:
-    s.close()
+        s.close()
+
 
 @router.message(Command("trigger_off"))
 async def cmd_trigger_off(m: types.Message):
@@ -305,40 +328,58 @@ async def cmd_trigger_off(m: types.Message):
     finally:
         s.close()
 
+
 @router.message(Command("paycheck"))
 async def cmd_paycheck(m: types.Message):
-    s=Session(); u=s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
-    # MVP: просто включаем premium на 30 дней
-    u.plan="premium"; u.plan_valid_to=datetime.utcnow()+timedelta(days=30)
-    s.commit(); s.close()
-    await m.answer("✅ Оплата подтверждена. Доступ premium активирован на 30 дней.")
+    """Временная команда для активации премиума"""
+    s = Session()
+    try:
+        u = s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
+        if not u:
+            await m.answer("Сначала выполните команду /start")
+            return
+            
+        # MVP: просто включаем premium на 30 дней
+        u.plan = "premium"
+        u.plan_valid_to = datetime.utcnow() + timedelta(days=30)
+        s.commit()
+        await m.answer("✅ Оплата подтверждена. Доступ premium активирован на 30 дней.")
+    finally:
+        s.close()
 
-
-from .config import PREMIUM_PRICE
-import os
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "demo_code")
 
 @router.message(Command("verify"))
 async def cmd_verify(m: types.Message):
+    """Верификация кода для активации премиума"""
     # /verify <code>
     parts = (m.text or "").split()
     if len(parts) < 2:
         await m.answer("Введите код подтверждения оплаты: /verify <код>")
         return
+        
     code = parts[1].strip()
     if code != VERIFY_TOKEN:
         await m.answer("Код не подошёл. Проверьте и повторите.")
         return
+        
     # Выдать премиум на 30 дней
-    s=Session(); u=s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
-    from datetime import datetime, timedelta
-    u.plan = "premium"
-    u.plan_valid_to = (u.plan_valid_to or datetime.utcnow())
-    if u.plan_valid_to < datetime.utcnow():
-        u.plan_valid_to = datetime.utcnow()
-    u.plan_valid_to += timedelta(days=30)
-    s.commit(); s.close()
-    await m.answer(f"Оплата подтверждена. Премиум активен до {u.plan_valid_to}. Спасибо!")
+    s = Session()
+    try:
+        u = s.query(User).filter_by(tg_id=str(m.from_user.id)).first()
+        if not u:
+            await m.answer("Сначала выполните команду /start")
+            return
+            
+        u.plan = "premium"
+        u.plan_valid_to = (u.plan_valid_to or datetime.utcnow())
+        if u.plan_valid_to < datetime.utcnow():
+            u.plan_valid_to = datetime.utcnow()
+        u.plan_valid_to += timedelta(days=30)
+        s.commit()
+        await m.answer(f"Оплата подтверждена. Премиум активен до {u.plan_valid_to}. Спасибо!")
+    finally:
+        s.close()
+
 
 def parse_portfolio_message(text):
     """
@@ -377,6 +418,7 @@ def parse_portfolio_message(text):
     
     return positions
 
+
 def detect_board(ticker):
     """
     Определяет биржевую доску по тикеру (упрощенная логика)
@@ -389,6 +431,7 @@ def detect_board(ticker):
     
     # Остальные считаем акциями
     return BOARD_SHARES
+
 
 def update_user_portfolio(user_id, positions):
     """
@@ -426,6 +469,7 @@ def update_user_portfolio(user_id, positions):
         return False
     finally:
         s.close()
+
 
 @router.message(Command("portfolio"))
 async def cmd_portfolio(m: types.Message):
@@ -495,6 +539,7 @@ async def cmd_portfolio(m: types.Message):
         
     finally:
         s.close()
+
 
 @router.message()
 async def handle_text_message(m: types.Message):

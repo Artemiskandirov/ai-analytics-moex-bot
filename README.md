@@ -30,7 +30,7 @@ cp env.example .env
 
 ```bash
 # Обязательные параметры
-TELEGRAM_TOKEN=your_bot_token_from_@BotFather
+BOT_TOKEN=your_bot_token_from_@BotFather
 OPENAI_API_KEY=your_openai_api_key
 BASE_URL=https://yourdomain.com
 WEBHOOK_SECRET_PATH=/webhook/secret/path
