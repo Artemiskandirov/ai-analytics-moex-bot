@@ -51,10 +51,12 @@ services:
   nginx:
     image: nginx:stable
     volumes:
-      - ./ops/nginx-simple.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ops/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ops/ssl:/etc/nginx/ssl:ro
       - ./logs:/var/log/nginx
     ports: 
       - "80:80"
+      - "443:443"
     depends_on:
       - web
     restart: always
