@@ -1,5 +1,8 @@
 import requests, datetime as dt
+import logging
 from .config import BOARD_SHARES, BOARD_ETF, BOARD_BONDS
+
+logger = logging.getLogger(__name__)
 
 UA = {"User-Agent": "ai-analytics-bot/1.0"}
 
@@ -46,16 +49,35 @@ def candles(secid:str, board:str, interval:int=24, frm:str=None):
 
 def _normalize(data):
     m={}
-    md = data[1]["marketdata"]; sec = data[0]["securities"]
-    sec_by_id={s["SECID"]:s for s in sec}
-    for row in md:
+    
+    # Проверяем структуру ответа API
+    if not data or len(data) < 2:
+        logger.error(f"MOEX API: Unexpected data structure: {data}")
+        return m
+    
+    # Проверяем наличие необходимых ключей
+    securities_data = data[0].get("securities", []) if isinstance(data[0], dict) else []
+    marketdata_data = data[1].get("marketdata", []) if isinstance(data[1], dict) else []
+    
+    if not securities_data or not marketdata_data:
+        logger.error(f"MOEX API: Missing data - securities: {bool(securities_data)}, marketdata: {bool(marketdata_data)}")
+        logger.error(f"MOEX API: data[0] keys: {list(data[0].keys()) if isinstance(data[0], dict) else 'not dict'}")
+        logger.error(f"MOEX API: data[1] keys: {list(data[1].keys()) if isinstance(data[1], dict) else 'not dict'}")
+        return m
+    
+    sec_by_id = {s["SECID"]: s for s in securities_data if isinstance(s, dict) and "SECID" in s}
+    
+    for row in marketdata_data:
+        if not isinstance(row, dict):
+            continue
         sid = row.get("SECID")
-        if not sid: continue
+        if not sid: 
+            continue
         m[sid] = {
             "last": row.get("LAST"), "open": row.get("OPEN"),
             "high": row.get("HIGH"), "low": row.get("LOW"),
             "change_pct": row.get("LASTCHANGEPRC"),
             "volume": row.get("VOLUME"),
-            "board": sec_by_id.get(sid,{}).get("BOARDID")
+            "board": sec_by_id.get(sid, {}).get("BOARDID")
         }
     return m
