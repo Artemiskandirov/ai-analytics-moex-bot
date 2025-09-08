@@ -30,19 +30,23 @@ def candles(secid:str, board:str, interval:int=24, frm:str=None):
     params={"from": frm, "interval": interval, "iss.json":"extended"}
     try:
         data = _get(url, params)
-        rows = data[1].get("candles", []) if len(data) > 1 else []
+        # MOEX candles API тоже возвращает структуру [metadata, [actual_data]]
+        candles_block = data[1].get("candles", []) if len(data) > 1 else []
+        rows = candles_block[1] if len(candles_block) > 1 and isinstance(candles_block[1], list) else []
+        
         out=[]
         for r in rows:
-            out.append({
-                "open": r.get("open"),
-                "close": r.get("close"),
-                "high": r.get("high"),
-                "low":  r.get("low"),
-                "value":r.get("value"),
-                "volume": r.get("volume"),
-                "begin": r.get("begin"),
-                "end":   r.get("end"),
-            })
+            if isinstance(r, list) and len(r) >= 8:  # Данные в виде массива
+                out.append({
+                    "open": r[0],
+                    "close": r[1], 
+                    "high": r[2],
+                    "low": r[3],
+                    "value": r[4],
+                    "volume": r[5],
+                    "begin": r[6],
+                    "end": r[7],
+                })
         return out
     except Exception as e:
         print(f"Error getting candles for {secid}: {e}")
