@@ -55,12 +55,19 @@ def _normalize(data):
         if len(data) < 2:
             return m
         
-        md = data[1].get("marketdata", []) if len(data) > 1 else []
-        sec = data[0].get("securities", []) if len(data) > 0 else []
+        # MOEX возвращает структуру: [metadata, [actual_data]]
+        md_block = data[1].get("marketdata", []) if len(data) > 1 else []
+        sec_block = data[1].get("securities", []) if len(data) > 1 else []
         
-        sec_by_id = {s.get("SECID"): s for s in sec if s.get("SECID")}
+        # Извлекаем фактические данные из второго элемента массива
+        md = md_block[1] if len(md_block) > 1 and isinstance(md_block[1], list) else []
+        sec = sec_block[1] if len(sec_block) > 1 and isinstance(sec_block[1], list) else []
+        
+        sec_by_id = {s.get("SECID"): s for s in sec if isinstance(s, dict) and s.get("SECID")}
         
         for row in md:
+            if not isinstance(row, dict):
+                continue
             sid = row.get("SECID")
             if not sid: 
                 continue
@@ -69,11 +76,11 @@ def _normalize(data):
                 "open": row.get("OPEN"),
                 "high": row.get("HIGH"), 
                 "low": row.get("LOW"),
-                "change_pct": row.get("LASTCHANGEPRC"),
-                "volume": row.get("VOLUME"),
+                "change_pct": row.get("LASTCHANGEPRCNT"),  # Исправил ключ
+                "volume": row.get("VOLTODAY"),  # Исправил ключ
                 "board": sec_by_id.get(sid, {}).get("BOARDID")
             }
     except Exception as e:
         print(f"Error normalizing MOEX data: {e}")
-        print(f"Data structure: {data}")
+        print(f"Data structure keys: {list(data.keys()) if isinstance(data, dict) else 'not dict'}")
     return m
