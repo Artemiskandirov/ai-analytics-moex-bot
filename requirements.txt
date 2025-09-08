@@ -1,0 +1,13 @@
+aiogram==3.*
+fastapi
+uvicorn
+requests
+apscheduler
+SQLAlchemy
+psycopg2-binary
+pydantic
+python-dotenv
+openai>=1.35.0
+pytz
+matplotlib
+pillow
