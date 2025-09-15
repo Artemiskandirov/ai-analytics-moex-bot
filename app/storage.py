@@ -24,6 +24,7 @@ class Portfolio(Base):
     __tablename__ = "portfolios"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    stocks = Column(String, nullable=True)  # JSON строка с акциями {"SBER": 100, "GAZP": 50}
     updated_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User", backref="portfolio")
 
