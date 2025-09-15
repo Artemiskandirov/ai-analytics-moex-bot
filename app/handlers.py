@@ -82,8 +82,9 @@ async def cmd_chart(m: types.Message):
     levels = {"levels":{"support": sup, "resistance": res}}
     try:
         path = render_price_chart(ticker, cs[-60:], levels=levels)
-        with open(path, "rb") as ph:
-            await m.bot.send_photo(chat_id=m.chat.id, photo=ph, caption=f"{ticker}: уровни внимания")
+        from aiogram.types import FSInputFile
+        photo = FSInputFile(path)
+        await m.bot.send_photo(chat_id=m.chat.id, photo=photo, caption=f"{ticker}: уровни внимания")
     except Exception as e:
         await m.answer(f"Не удалось построить график: {e}")
 
@@ -100,8 +101,9 @@ async def cmd_chart_ta(m: types.Message):
     try:
         from .charts import render_ta_chart
         path = render_ta_chart(ticker, cs[-200:])
-        with open(path, "rb") as ph:
-            await m.bot.send_photo(chat_id=m.chat.id, photo=ph, caption=f"{ticker}: TA график")
+        from aiogram.types import FSInputFile
+        photo = FSInputFile(path)
+        await m.bot.send_photo(chat_id=m.chat.id, photo=photo, caption=f"{ticker}: TA график")
     except Exception as e:
         await m.answer(f"Не удалось построить TA-график: {e}")
 
