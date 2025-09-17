@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from .config import TIMEZONE, POLL_SEC
 from .storage import Session, User, Portfolio, Position, EventLog
 from .llm import render_digest
-from .moex import quotes_shares
-import json, quotes_etf, quotes_bonds
+from .moex import quotes_shares, quotes_etf, quotes_bonds
+import json
 from collections import defaultdict
 
 def start_scheduler(bot):
@@ -86,5 +86,60 @@ def start_scheduler(bot):
         finally:
             s.close()
 
+    async def check_portfolio_alerts():
+        """Проверка портфелей на значительные изменения (2%+) без GPT - каждую минуту"""
+        s = Session()
+        try:
+            # Получаем всех пользователей с портфелями
+            portfolios = s.query(Portfolio).filter(Portfolio.stocks.isnot(None)).all()
+            
+            for portfolio in portfolios:
+                try:
+                    stocks = json.loads(portfolio.stocks)
+                    if not stocks:
+                        continue
+                    
+                    # Получаем текущие котировки
+                    tickers = list(stocks.keys())
+                    quotes = quotes_shares(tickers)
+                    
+                    alerts = []
+                    total_change = 0
+                    
+                    for ticker, quantity in stocks.items():
+                        quote = quotes.get(ticker, {})
+                        change_pct = quote.get("change_pct", 0)
+                        current_price = quote.get("last", 0)
+                        
+                        # Проверяем значительные изменения
+                        if abs(change_pct) >= 2.0:  # Изменение больше 2%
+                            emoji = "🚀" if change_pct > 0 else "📉"
+                            position_change = current_price * change_pct / 100 * quantity
+                            alerts.append(f"{emoji} {ticker}: {change_pct:+.1f}% ({position_change:+.0f} ₽)")
+                        
+                        total_change += current_price * change_pct / 100 * quantity
+                    
+                    # Отправляем уведомление если есть значительные изменения
+                    if alerts:
+                        user = s.query(User).filter_by(id=portfolio.user_id).first()
+                        
+                        alert_text = "🔔 Изменения в портфеле:\n\n" + "\n".join(alerts)
+                        alert_text += f"\n\n💼 Общее изменение: {total_change:+.0f} ₽"
+                        
+                        if abs(total_change) >= 1000:  # Значительное изменение портфеля
+                            alert_text += "\n\n📊 Рекомендую проверить анализ портфеля"
+                        
+                        await bot.send_message(chat_id=user.tg_id, text=alert_text)
+                        print(f"Portfolio alert sent to user {user.tg_id}: {len(alerts)} changes")
+                        
+                except Exception as e:
+                    print(f"Error checking portfolio {portfolio.id}: {e}")
+                    
+        except Exception as e:
+            print(f"Error in portfolio alerts: {e}")
+        finally:
+            s.close()
+
     sch.add_job(triggers_job, "interval", seconds=POLL_SEC)
+    sch.add_job(check_portfolio_alerts, "interval", minutes=1)  # Мониторинг каждую минуту
     sch.start()
