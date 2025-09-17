@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from .config import TIMEZONE, POLL_SEC
 from .storage import Session, User, Portfolio, Position, EventLog
 from .llm import render_digest
-from .moex import quotes_shares, quotes_etf, quotes_bonds
+from .moex import quotes_shares
 import json
 from collections import defaultdict
 
@@ -58,10 +58,11 @@ def start_scheduler(bot):
                 quotes = {}
                 if boards.get("TQBR"):
                     quotes.update(quotes_shares(list(set(boards["TQBR"]))))
-                if boards.get("TQTF"):
-                    quotes.update(quotes_etf(list(set(boards["TQTF"]))))
-                if boards.get("TQOB"):
-                    quotes.update(quotes_bonds(list(set(boards["TQOB"]))))
+                # TODO: Добавить поддержку ETF и облигаций в будущем
+                # if boards.get("TQTF"):
+                #     quotes.update(quotes_etf(list(set(boards["TQTF"]))))
+                # if boards.get("TQOB"):
+                #     quotes.update(quotes_bonds(list(set(boards["TQOB"]))))
                 def daily_count(uid):
                     today = datetime.utcnow().date()
                     start = datetime(today.year, today.month, today.day)
