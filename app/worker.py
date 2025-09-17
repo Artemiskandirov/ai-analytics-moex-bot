@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from .config import TIMEZONE, POLL_SEC
 from .storage import Session, User, Portfolio, Position, EventLog
 from .llm import render_digest
-from .moex import quotes_shares, quotes_etf, quotes_bonds
+from .moex import quotes_shares
+import json, quotes_etf, quotes_bonds
 from collections import defaultdict
 
 def start_scheduler(bot):
