@@ -283,7 +283,7 @@ async def callback_portfolio_dynamics(callback: types.CallbackQuery):
             else:
                 text += "\n➡️ Портфель без изменений"
                 
-        except Exception as e:
+    except Exception as e:
             text = f"❌ Ошибка расчета динамики: {e}"
             
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -361,7 +361,7 @@ async def callback_add_specific_stock(callback: types.CallbackQuery):
         
         text = f"✅ {ticker} добавлен в портфель (+10 шт.)\n\nТеперь вы можете отслеживать динамику этой позиции!"
         
-        except Exception as e:
+    except Exception as e:
         text = f"❌ Ошибка добавления: {e}"
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
