@@ -7,7 +7,7 @@ from .storage import Session, User, Portfolio
 from .texts import HELLO
 from .moex import quotes_shares, candles
 from .levels import atr, educational_levels
-from .llm import render_stock_analysis, render_portfolio_analysis, render_market_strategy
+from .llm import render_trial_note
 
 router = Router()
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "demo_code")
@@ -25,10 +25,9 @@ def get_main_keyboard():
     """Главное меню с кнопками"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Анализ акции", callback_data="analyze_stock")],
-        [InlineKeyboardButton(text="💼 Анализ портфеля", callback_data="portfolio_analysis")],
+        [InlineKeyboardButton(text="💼 Мой портфель", callback_data="my_portfolio")],
+        [InlineKeyboardButton(text="➕ Добавить в портфель", callback_data="add_to_portfolio")],
         [InlineKeyboardButton(text="📈 Динамика портфеля", callback_data="portfolio_dynamics")],
-        [InlineKeyboardButton(text="🎯 Рыночная стратегия", callback_data="market_strategy")],
-        [InlineKeyboardButton(text="➕ Добавить акции", callback_data="add_to_portfolio")],
         [InlineKeyboardButton(text="🔍 Поиск акций", callback_data="search_stocks")],
         [InlineKeyboardButton(text="ℹ️ Помощь", callback_data="help")]
     ])
@@ -73,7 +72,7 @@ async def analyze_stock(m: types.Message, ticker: str):
         atr14 = atr(series, period=14)
     
     levels = educational_levels(q.get("last"), atr14 or 1.0, support=(q.get("low") or 0), resistance=(q.get("high") or 0), k=1.5)
-    note = render_stock_analysis(ticker, q, levels)
+    note = render_trial_note(ticker, q, levels)
     
     # Кнопки для дальнейших действий
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -101,70 +100,6 @@ async def callback_main_menu(callback: types.CallbackQuery):
 @router.callback_query(lambda c: c.data == "analyze_stock")
 async def callback_analyze_stock(callback: types.CallbackQuery):
     await callback.message.edit_text("📊 Введите тикер для анализа:\nПример: SBER, GAZP, LKOH\n\nИспользуйте команду: /analyze ТИКЕР")
-
-@router.callback_query(lambda c: c.data == "portfolio_analysis")
-async def callback_portfolio_analysis(callback: types.CallbackQuery):
-    s = Session()
-    u = s.query(User).filter_by(tg_id=str(callback.from_user.id)).first()
-    portfolio = s.query(Portfolio).filter_by(user_id=u.id).first()
-    
-    if not portfolio.stocks:
-        text = "💼 Сначала добавьте акции для анализа портфеля"
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Добавить акции", callback_data="add_to_portfolio")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
-        ])
-    else:
-        try:
-            import json
-            stocks = json.loads(portfolio.stocks)
-            
-            # Получаем актуальные данные по всем акциям
-            tickers = list(stocks.keys())
-            quotes = quotes_shares(tickers)
-            
-            stocks_data = {}
-            for ticker, quantity in stocks.items():
-                quote = quotes.get(ticker, {})
-                current_price = quote.get("last", 0)
-                change_pct = quote.get("change_pct", 0)
-                position_value = current_price * quantity
-                
-                stocks_data[ticker] = {
-                    'current_price': current_price,
-                    'change_pct': change_pct,
-                    'quantity': quantity,
-                    'position_value': position_value
-                }
-            
-            # Получаем анализ от ИИ
-            text = render_portfolio_analysis(stocks_data)
-            
-        except Exception as e:
-            text = f"❌ Ошибка анализа портфеля: {e}"
-            
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📈 Динамика", callback_data="portfolio_dynamics")],
-            [InlineKeyboardButton(text="🎯 Стратегия", callback_data="market_strategy")],
-            [InlineKeyboardButton(text="🏠 Меню", callback_data="main_menu")]
-        ])
-    
-    s.close()
-    await callback.message.edit_text(text, reply_markup=keyboard)
-
-@router.callback_query(lambda c: c.data == "market_strategy")
-async def callback_market_strategy(callback: types.CallbackQuery):
-    # Получаем рыночные данные для стратегии
-    market_data = {}  # TODO: добавить индексы MOEX, секторы
-    text = render_market_strategy(market_data)
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💼 Анализ портфеля", callback_data="portfolio_analysis")],
-        [InlineKeyboardButton(text="📊 Анализ акции", callback_data="analyze_stock")],
-        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
-    ])
-    
-    await callback.message.edit_text(text, reply_markup=keyboard)
 
 @router.callback_query(lambda c: c.data == "my_portfolio")
 async def callback_my_portfolio(callback: types.CallbackQuery):
@@ -283,7 +218,7 @@ async def callback_portfolio_dynamics(callback: types.CallbackQuery):
             else:
                 text += "\n➡️ Портфель без изменений"
                 
-    except Exception as e:
+        except Exception as e:
             text = f"❌ Ошибка расчета динамики: {e}"
             
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
