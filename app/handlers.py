@@ -7,7 +7,7 @@ from .storage import Session, User, Portfolio
 from .texts import HELLO
 from .moex import quotes_shares, candles
 from .levels import atr, educational_levels
-from .llm import render_trial_note
+from .llm import render_stock_analysis
 
 router = Router()
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "demo_code")
@@ -72,7 +72,7 @@ async def analyze_stock(m: types.Message, ticker: str):
         atr14 = atr(series, period=14)
     
     levels = educational_levels(q.get("last"), atr14 or 1.0, support=(q.get("low") or 0), resistance=(q.get("high") or 0), k=1.5)
-    note = render_trial_note(ticker, q, levels)
+    note = render_stock_analysis(ticker, q, levels)
     
     # Кнопки для дальнейших действий
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
